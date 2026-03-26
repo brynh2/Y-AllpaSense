@@ -1,231 +1,73 @@
-<div align="center">
+# Y-AllpaSense — Intelligent Soil Parameter Sensor
 
-<img src="https://umsousercontent.com/lib_lnlnuhLgkYnZdkSC/hj0vk05j0kemus1i.png" alt="ChipFoundry Logo" height="140" />
-
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Inter&size=44&duration=3000&pause=600&color=4C6EF5&center=true&vCenter=true&width=1100&lines=Caravel+User+Project+Template;OpenLane+%2B+ChipFoundry+Flow;Verification+and+Shuttle-Ready)](https://git.io/typing-svg)
-
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![ChipFoundry Marketplace](https://img.shields.io/badge/ChipFoundry-Marketplace-6E40C9.svg)](https://platform.chipfoundry.io/marketplace)
-
-</div>
-
-## Table of Contents
-- [Overview](#overview)
-- [Documentation & Resources](#documentation--resources)
-- [Prerequisites](#prerequisites)
-- [Project Structure](#project-structure)
-- [Starting Your Project](#starting-your-project)
-- [Development Flow](#development-flow)
-- [GPIO Configuration](#gpio-configuration)
-- [Local Precheck](#local-precheck)
-- [Checklist for Shuttle Submission](#checklist-for-shuttle-submission)
-
-## Overview
-This repository contains a user project designed for integration into the **Caravel chip user space**. Use it as a template for integrating custom RTL with Caravel's system-on-chip (SoC) utilities, including:
-
-* **IO Pads:** Configurable general-purpose input/output.
-* **Logic Analyzer Probes:** 128 signals for non-intrusive hardware debugging.
-* **Wishbone Port:** A 32-bit standard bus interface for communication between the RISC-V management core and your custom hardware.
+Universidad Nacional Mayor de San Marcos  
+Faculty of Electronic and Electrical Engineering  
+Ychma Technologies
 
 ---
 
-## Documentation & Resources
-For detailed hardware specifications and register maps, refer to the following official documents:
+## About the Team
 
-* **[Caravel Datasheet](https://github.com/chipfoundry/caravel/blob/main/docs/caravel_datasheet_2.pdf)**: Detailed electrical and physical specifications of the Caravel harness.
-* **[Caravel Technical Reference Manual (TRM)](https://github.com/chipfoundry/caravel/blob/main/docs/caravel_datasheet_2_register_TRM_r2.pdf)**: Complete register maps and programming guides for the management SoC.
-* **[ChipFoundry Marketplace](https://platform.chipfoundry.io/marketplace)**: Access additional IP blocks, EDA tools, and shuttle services.
+This project is a collaboration between a graduate engineer and the Advanced Technology Research Group at UNMSM's Faculty of Electronic and Electrical Engineering (FIEE).
 
----
+The project is led by Bryan Claudio Huane Rodriguez, a systems and embedded electronics engineer with hands-on experience developing PCBs for monitoring equipment in mining operations. His exposure to open-source IC design tools came through participation in IEEE CAS initiatives, particularly the UNICASS program, which opened the path toward exploring custom silicon as a viable approach for real engineering problems. The broader goal behind this work is to build a unique sensor that can work as a standalone device or as part of a larger system developed under Ychma Technologies, a startup currently in its forming stages, focused on embedded systems and precision agriculture technology.
 
-## Prerequisites
-Ensure your environment meets the following requirements:
-
-1. **Docker** [Linux](https://docs.docker.com/desktop/setup/install/linux/ubuntu/) | [Windows](https://docs.docker.com/desktop/setup/install/windows-install/) | [Mac](https://docs.docker.com/desktop/setup/install/mac-install/)
-2. **Python 3.8+** with `pip`.
-3. **Git**: For repository management.
+The university side brings the research infrastructure and academic expertise of the FIEE Advanced Technology Research Group, making this a collaboration between industry-oriented development and applied academic research. Beyond the product itself, this project aims to strengthen the group's work in applied research around custom integrated circuits, contributing to a line of investigation that addresses real engineering challenges in Peru.
 
 ---
 
-## Project Structure
-A successful Caravel project requires a specific directory layout for the automated tools to function:
+## Product Overview
 
-| Directory | Description |
-| :--- | :--- |
-| `openlane/` | Configuration files for hardening macros and the wrapper. |
-| `verilog/rtl/` | Source Verilog code for the project. |
-| `verilog/gl/` | Gate-level netlists (generated after hardening). |
-| `verilog/dv/` | Design Verification (cocotb and Verilog testbenches). |
-| `gds/` | Final GDSII binary files for fabrication. |
-| `lef/` | Library Exchange Format files for the macros. |
+Y-AllpaSense is a low-cost soil monitoring probe designed for Peruvian farmers who need reliable field data without expensive equipment. The device measures soil parameters: volumetric water content, salinity, and electrical conductivity using electrical impedance spectroscopy (EIS), a technique that extracts physical patterns from the soil by analyzing how it responds to electrical signals across a wide range of frequencies.
 
----
+The goal is to make this kind of measurement accessible and easy to integrate with modern agricultural monitoring and control systems, whether that's a LoRaWAN network, a datalogger, or a proprietary WSN. The device runs primarily on a 1 W solar panel, which combined with its low power design keeps it running indefinitely in the field with no need for frequent battery changes. For configuration and direct field readout, the node also exposes a BLE 5.x profile readable from any smartphone or tablet within 10 to 30 meters.
 
-## Starting Your Project
+For wider network deployments, the node includes a Sub-GHz radio module. While LoRa / LoRaWAN is the default option for open field coverage, the Sub-GHz interface is not locked to that protocol, it can support other RF stacks used in closed or infrastructure-managed environments including solutions based on TI or STM32 wireless platforms.
 
-### 1. Repository Setup
-Create a new repository based on the `caravel_user_project` template and clone it to your local machine:
+The system is built around three main components. The first PCB handles battery charging from the solar panel and RF communication. The second board carries the YSM1R IC, which drives the electrodes, captures the soil's electrical response, and outputs already-interpreted data at the lowest possible energy cost. The electrodes themselves are copper or brass rings mounted concentrically on cylindrical PVC sleeves — the PVC protects the electrode and acts as a known reference dielectric in the measurement model. The electric field penetrates radially from the rings into the soil. The volumetric water content and electrical conductivity of the soil within that volume change the complex impedance of the capacitor, and that change is what the YSM1R captures and processes through the full analog chain — TIA, IQ demodulator, and high-resolution ADC — before the RISC-V core fits the Cole-Cole model and outputs the final parameters.
 
-```bash
-git clone <your-github-repo-URL>
-pip install chipfoundry-cli
-cd <project_name>
-```
 
-### 2. Project Initialization
-
-> [!IMPORTANT]
-> Run this first! Initialize your project configuration:
-
-```bash
-cf init
-```
-
-This creates `.cf/project.json` with project metadata. **This must be run before any other commands** (`cf setup`, `cf gpio-config`, `cf harden`, `cf precheck`, `cf verify`).
-
-### 3. Environment Setup
-Install the ChipFoundry CLI tool and set up the local environment (PDKs, OpenLane, and Caravel lite):
-
-```bash
-cf setup
-```
-
-The `cf setup` command installs:
-
-- Caravel Lite: The Caravel SoC template.
-- Management Core: RISC-V management area required for simulation.
-- OpenLane: The RTL-to-GDS hardening flow.
-- PDK: Skywater 130nm process design kit.
-- Timing Scripts: For Static Timing Analysis (STA).
+![Product Description](docs/product_description.jpg)
 
 ---
 
-## Development Flow
+## Integrated Circuit Description
 
-### Hardening the Design
-Hardening is the process of synthesizing your RTL and performing Place & Route (P&R) to create a GDSII layout.
+The YSM1R is the core of the system. It's not a generic impedance meter adapted for soil use but an agronomic sensor with embedded dielectric spectroscopy, built specifically to extract soil parameters without needing any external processing.
 
-#### Macro Hardening
-Create a subdirectory for each custom macro under `openlane/` containing your `config.tcl`.
+The measurement principle is **electrical impedance spectroscopy (EIS)**. The chip drives the electrodes with a signal that sweeps over 5 frequency decades (1 kHz to 100 MHz), measures the in-phase and quadrature response at each point, and fits a Cole-Cole model to the resulting spectrum. From that fit it directly outputs VWC (%), EC (dS/m), and temperature — ready to transmit.
 
-```bash
-cf harden --list         # List detected configurations
-cf harden <macro_name>   # Harden a specific macro
-```
+Each physical phenomenon in the soil has its signature in a specific frequency range. At low frequencies (1–10 kHz), ionic conduction dominates and reveals salinity. In the mid range (10 kHz–10 MHz), polarization and Maxwell-Wagner effects show up and carry information about texture and clay content. At high frequencies (10–100 MHz), free water relaxation is the main mechanism and gives a precise reading of volumetric water content.
 
-#### Integration
-Instantiate your module(s) in `verilog/rtl/user_project_wrapper.v`.
+Internally, the analog front end is built around a DDS that generates the excitation signal, followed by a MUX that selects the active electrode level, a transimpedance amplifier (TIA) with automatic gain switching, and an IQ demodulator that extracts the in-phase and quadrature components of the response. The NTC thermistor input is handled by a dedicated analog conditioning block at this same stage. Digitization is handled by a high-resolution ADC whose output feeds directly into the digital processing block. For the digital side, the design uses a RISC-V RV32E hardwired CPU paired with 4 kB of SRAM. This will initially operate from an established architecture as a working baseline, with simplification toward a minimal application-specific core as the design matures. Existing open-source SRAM and ROM blocks will be used as a starting point, with no marketplace IP required at this stage.
 
-Update `openlane/user_project_wrapper/config.json` environment variables (`VERILOG_FILES_BLACKBOX`, `EXTRA_LEFS`, `EXTRA_GDS_FILES`) to point to your new macros.
+The IC also integrates an energy management block that handles internal voltage levels and sleep mode, keeping the chip under 1 µA when idle.
 
-#### Wrapper Hardening
-Finalize the top-level user project:
+Temperature is measured with an external NTC thermistor connected to the IC through a dedicated analog input. It's a standard, low-cost component that's easy to replace in the field. 
 
-```bash
-cf harden user_project_wrapper
-```
+The output interface is I²C  (SDA/SCL), implemented via IP of Chipfoundry, keeping integration straightforward with microcontrollers and wireless modules on the system's main board. The chip also exposes an INT pin for interrupt-driven operation, allowing the host to be notified when a measurement cycle is complete without polling the bus.
 
-### Verification
-
-#### 1. Simulation
-We use cocotb for functional verification. Ensure your file lists are updated in `verilog/includes/`.
-
-**Configure GPIO settings first (required before verification):**
-
-```bash
-cf gpio-config
-```
-
-This interactive command will:
-- Configure all GPIO pins interactively
-- Automatically update `verilog/rtl/user_defines.v`
-- Automatically run `gen_gpio_defaults.py` to generate GPIO defaults for simulation
-
-GPIO configuration is required before running any verification tests.
-
-Run RTL Simulation:
-
-```bash
-cf verify <test_name>
-```
-
-Run Gate-Level (GL) Simulation:
-
-```bash
-cf verify <test_name> --sim gl
-```
-
-Run all tests:
-
-```bash
-cf verify --all
-```
-
-#### 2. Static Timing Analysis (STA)
-Verify that your design meets timing constraints using OpenSTA:
-
-```bash
-make extract-parasitics
-make create-spef-mapping
-make caravel-sta
-```
-
-> [!NOTE]
-> Run `make setup-timing-scripts` if you need to update the STA environment.
+![YSM1R Description](docs/ic_description.jpg)
 
 ---
 
-## GPIO Configuration
-Configure the power-on default configuration for each GPIO using the interactive CLI tool.
+## Mechanical Description
 
-**Use the GPIO configuration command:**
-```bash
-cf gpio-config
-```
+The probe body is a cylindrical high-dielectric-strength PVC tube designed to be inserted vertically into the soil. The PVC serves two purposes: it's the structural element and also the reference dielectric in the measurement model, since its permittivity is constant and well-known.
 
-This command will:
-- Present an interactive form for configuring GPIO pins 5-37 (GPIO 0-4 are fixed system pins)
-- Show available GPIO modes with descriptions
-- Allow selection by number, partial key, or full mode name
-- Save configuration to `.cf/project.json` (as hex values)
-- Automatically update `verilog/rtl/user_defines.v` with the new configuration
-- Automatically run `gen_gpio_defaults.py` to generate GPIO defaults for simulation (if Caravel is installed)
+The top end of the tube houses the communication electronics (BLE and Sub-GHz module), the central power management, and the solar panel connector. Each measurement level has its own PCB sitting inside the tube, stacked along the vertical axis, with electrical connections to the outer rings through sealed holes in the tube wall. Each of these boards carries the YSM1R IC and the NTC thermistor connector one complete measurement node per depth level.
 
-**GPIO Pin Information:**
-- GPIO[0] to GPIO[4]: Preset system pins (do not change).
-- GPIO[5] to GPIO[37]: User-configurable pins.
+The probe is designed to grow with the application. Additional sensing modules can be stacked to reach deeper soil layers, each one adding a new measurement level to the profile. This means the same hardware architecture scales from a shallow two-level install to a full multi-depth deployment, without redesigning any existing part of the system.
 
-**Available GPIO Modes:**
-- Management modes: `mgmt_input_nopull`, `mgmt_input_pulldown`, `mgmt_input_pullup`, `mgmt_output`, `mgmt_bidirectional`, `mgmt_analog`
-- User modes: `user_input_nopull`, `user_input_pulldown`, `user_input_pullup`, `user_output`, `user_bidirectional`, `user_output_monitored`, `user_analog`
-
-> [!NOTE]
-> GPIO configuration is required before running `cf precheck` or `cf verify`. Invalid modes cannot be saved - all GPIOs must have valid configurations.
+| Level | Typical depth | Parameters measured |
+|---|---|---|
+| Level 1 | 0 – 15 cm | VWC, EC — shallow root zone |
+| Level 2 | 15 – 30 cm | VWC, EC — active root zone |
+| Level 3 | 30 – 60 cm | VWC, EC — wetting front |
+| Level N | configurable | expandable depending on crop and depth |
 
 ---
 
-## Local Precheck
-Before submitting your design for fabrication, run the local precheck to ensure it complies with all shuttle requirements:
-
-> [!IMPORTANT]
-> GPIO configuration is required before running precheck. Make sure you've run `cf gpio-config` first.
-
-```bash
-cf precheck
-```
-
-You can also run specific checks or disable LVS:
-
-```bash
-cf precheck --disable-lvs                    # Skip LVS check
-cf precheck --checks license --checks makefile  # Run specific checks only
-```
----
-
-## Checklist for Shuttle Submission
-- [ ] Top-level macro is named user_project_wrapper.
-- [ ] Full Chip Simulation passes for both RTL and GL.
-- [ ] Hardened Macros are LVS and DRC clean.
-- [ ] user_project_wrapper matches the required pin order/template.
-- [ ] Design passes the local cf precheck.
-- [ ] Documentation (this README) is updated with project-specific details.
+*Universidad Nacional Mayor de San Marcos — Ciudad Universitaria, Lima, Peru*  
+*Faculty of Electronic and Electrical Engineering*
+*Ychsma Technologies*
